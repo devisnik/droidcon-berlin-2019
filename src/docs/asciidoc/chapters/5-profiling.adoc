@@ -1,0 +1,68 @@
+== Where is the problem?
+
+[NOTE.speaker]
+--
+We can not just jump into the build and fix some random finding.
+
+To tackle performance issues, we need a more rigid and scientific approach.
+--
+
+=== Process
+
+. define scenario to improve
+. profile it
+. identify biggest bottleneck
+. fix it
+. verify (by measurement)
+
+[NOTE.speaker]
+--
+To explore performance issues we have a process to follow.
+
+You need to decide what you want to improve.
+
+sample scenarios:
+
+* Android studio sync time
+* single line change triggers long-running build
+* developers complain about slow test execution
+
+Often you see multiple things to improve, but focus on the biggest issue.
+
+Verification is absolutely needed.
+Often we see people just assuming a fix works!
+
+We follow this process at Gradle to improve performance!
+--
+
+=== Automate your measurements
+
+[source,bash]
+----
+check-no-tests {
+    tasks = ["check"]
+    gradle-args = ["-x", "test"]
+    cleanup-tasks = ["clean"]
+    warm-ups = 2
+}
+androidStudioSync {
+    android-studio-sync { }
+}
+----
+
+https://github.com/gradle/gradle-profiler
+
+[NOTE.speaker]
+--
+When you're serious about performance, you absolutely want to automate all your measurements.
+
+Gradle Profiler is a tool to automate the gathering of profiling and benchmarking information
+for Gradle builds.
+
+* runs pre-defined scenarios -> see examples
+* can produce all kinds of profiling outputs, including Build scans
+
+Used internally within Gradle. You can send us a profile if your experiencing issue an we can
+look ay it.
+--
+

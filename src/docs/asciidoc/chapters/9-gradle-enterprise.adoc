@@ -1,0 +1,25 @@
+== Keeping Track of Performance
+
+=== Gradle Enterprise
+
+* all the builds of your organization
+* searchable
+* powerful dashboards
+* build comparisons
+* enterprise grade remote cache
+* supports Gradle and Maven
+* installed on premise within your organization
+
+[small]
+--
+https://gradle.com/
+--
+
+[NOTE.speaker]
+--
+If you like build scans, imaging what you could do
+when you'd collect build scans for each build run within your organization.
+
+"runs on my machine" problems become a lot easier to solve.
+Let's just compare the 2 belonging scans.
+--

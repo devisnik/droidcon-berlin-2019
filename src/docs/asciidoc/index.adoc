@@ -10,82 +10,54 @@ ifndef::sourcedir[:sourcedir: ../java]
 :title-slide-transition-speed: fast
 :icons: font
 
-= : Switching to Gradle
+= : Improving Android Build Performance
 
 +++<h2>+++
-Maturity, performance and pleasure!
+Droidcon Berlin 2019
 +++</h2>+++
 
-Cédric Champeau (@CedricChampeau) & Louis Jacomet (@ljacomet) - Gradle Inc.
+Volker Leck (@devisnik) - Gradle Inc.
 
-== Who are we?
+[NOTE.speaker]
+--
+Welcome, everybody!
 
-[%notitle]
-=== Cedric
-[source,groovy]
-----
-speaker {
-    name 'Cédric Champeau'
-    company 'Gradle Inc'
-    oss 'Apache Groovy committer',
-    successes 'Static type checker',
-              'Static compilation',
-              'Traits',
-              'Markup template engine',
-              'DSLs'
-        failures Stream.of(bugs),
-        twitter '@CedricChampeau',
-        github 'melix',
-        extraDescription '''Groovy in Action 2 co-author
-Misc OSS contribs'''
-}
-----
+Let's talk about Android Build performance.
 
-[%notitle]
-=== Louis
-[source,groovy]
-----
-speaker {
-    name 'Louis Jacomet'
-    company 'Gradle Inc'
-    past 'Terracotta / Ehcache',
-              'Freelance consultant',
-        failures Stream.of(bugs),
-        twitter '@ljacomet',
-        github 'ljacomet',
-        extraDescription '''Not fully figured out
-how to stay out of management?!?'''
-}
-----
+We all heard that the Android build system is based on Gradle.
+And we'll look into the mechanics of that quite bit in this this talk.
 
-include::chapters/about-gradle.adoc[]
+So what is Gradle?
+--
 
-== A screencast
-
-screencast:step1[]
-
-== Another screencast
-
-screencast:step2[]
+include::chapters/1-about-gradle.adoc[]
+include::chapters/2-cost-of-builds.adoc[]
+//include::chapters/3-gradle-in-a-nutshell.adoc[]
+include::chapters/5-profiling.adoc[]
+include::chapters/4-general-advice.adoc[]
+include::chapters/6-build-lifecycle.adoc[]
+include::chapters/7-configuration.adoc[]
+include::chapters/8-execution.adoc[]
+include::chapters/9-gradle-enterprise.adoc[]
 
 == Conclusion
 
-=== Gradle Enterprise
+=== Takeaways
 
-* On premise build cache and build scan solution
-* Out of the box solution for distributed build cache
-* Improved build scan feature set
-** Searchable build history
-** Build comparison
+* know your build
+* monitor and measure
+* avoid unnecessary configuration
+* re-use task outputs
 
-=== Sessions at Devoxx BE
+=== Resources
 
-* https://dvbe18.confinabox.com/talk/DBF-1594/project_versioning_like_a_git[Project versioning like a git]
-** Matthieu Brouillard
-** Wednesday, 13:30 - 13:45 Room 5
+https://docs.gradle.org
 
-* https://dvbe18.confinabox.com/talk/VFH-6802/Improving_Android_Build_Performance[Improving Android Build performance]
-** Cédric Champeau
-**  Thursday, 16:30 - 17:15 Room 3
+https://guides.gradle.org/performance/
+
+https://developer.android.com/studio/build/optimize-your-build.html
+
+== Thank you!
+
 
 

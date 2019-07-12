@@ -1,0 +1,72 @@
+== The Cost of Builds
+
+[NOTE.speaker]
+--
+Why do we even care about build performance?
+--
+
+=== Fast builds matter
+
+30 seconds waste * 50 builds * 10 developers
+
++>+ 4 hours wasted time per day
+
+[NOTE.speaker]
+--
+* Just do the math!
+* ...not even considering lost focus
+* When the build is slow:
+** people start building less (work in larger increments instead), getting less early feedback,
+** issues arise late
+** more failure on CI.
+--
+
+//=== What's a modern build
+//* reliable / reproducible
+//* customizable
+//* universal
+//* self-contained
+//* fast, smart
+//* maintainable
+//
+//[NOTE.speaker]
+//--
+//* not flaky, succeeds or fails repeatedly
+//* handles specific requirements
+//* runs from IDE, commandline and on CI
+//* minimal dependencies, easy to set up and get started
+//* performant
+//* does not do work unnecessarily
+//* easy to understand and extend
+//--
+
+=== Build engineer
+
+* monitors build
+* ensures build health
+* fixes regressions
+
+[NOTE.speaker]
+--
+answers questions like:
+
+* How many builds are run locally and on CI?
+* How often do they fail? And for which reasons?
+* What are the longest-running tasks?
+* Which tasks are run most often?
+* Has our build become slower/faster lately?
+* By how much?
+* Which parts are affected?
+* Which tests are slow? Which are flaky?
+--
+
+=== Build engineering
+[quote, "Hans Dockter, Founder and CEO of Gradle Inc."]
+____
+In a healthy culture, developers and engineering leaders understand that the domain
+of *building and integrating* software is just as *complex and challenging* as the domain
+of application development.
+____
+
+https://gradle.com/blog/build-engineer-challenges/
+

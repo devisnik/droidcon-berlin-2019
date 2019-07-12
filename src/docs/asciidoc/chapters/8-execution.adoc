@@ -1,0 +1,293 @@
+
+=== Execution
+Executing selected tasks
+
+* Incremental
+* Cacheable
+* Parallelizable
+
+[NOTE.speaker]
+--
+Gradle run the requested task or tasks.
+
+Example: `gradle clean`, `gradle assembleDebug`
+
+includes AndroidStudio-Sync, Android Studio uses Gradle under the hood
+
+To do so, it needs to run all the tasks it transitively depends on.
+
+Gradle makes task execution faster:
+
+* by running task incrementally
+* caching task outputs
+* running tasks in parallel
+
+You want the execution to be incremental, highly cacheable, and parallelized.
+
+So let's look into each of these properties.
+--
+
+=== Incrementality
+
+Nothing changed and outputs still there?
+ +
+Executed tasks should be zero!
+
+[NOTE.speaker]
+--
+Gradle can run tasks incrementally.
+
+If the inputs of a tasks have not changed, and the outputs are still available
+(because the task has been run before), the task does not need to run again.
+
+Example: compilation does not need to be re-run if the source code hasn't changed.
+
+Incrementality is something a task *opts into* by defining its inputs and outputs.
+--
+
+=== Non-incremental task
+
+image::not-up-to-date-4.png[non-incremental task, 1100, *]
+
+[NOTE.speaker]
+--
+Here we see an example of a task that does not support incrementality.
+
+We run `assembleDebug` twice, everything is reported as up-to-date, but still the task
+executes again.
+
+Happens because the task *does not produce output*, but rather prints into the console.
+
+* no output, no incrementality
+* more often: changing inputs, like timestamps, version counters, git commit sha etc.
+--
+
+=== Changing task input
+
+image::changing-input-2.png[changing input, 1100, *]
+
+[NOTE.speaker]
+--
+Here is another task that re-runs on each execution.
+
+We see that a property `timestamp` has changed.
+
+If an input changes with each Gradle run, that completely destroys incrementality.
+
+Fabrics is doing something similar, generating a unique build Id for every build.
+
+If you're a Fabrics user, make sure to disable that feature for your debug builds.
+
+https://docs.fabric.io/android/crashlytics/build-tools.html#disable-crashlytics-for-debug-builds
+--
+
+=== Faster Compilation
+
+* Modularization => Compile avoidance
+* Decoupled code => Faster incremental compilation
+* careful with annotation processing
+
+[NOTE.speaker]
+--
+Gradle provides ways to make compilation faster.
+
+Concept of "Compile Avoidance"
+
+* if project A depends on project B and an implementation detail in B is changed
+without affecting B's public interface, A does not need to be recompiled
+* Modularization enables compile avoidance
+** does not work for kotlin yet: https://youtrack.jetbrains.com/issue/KT-24203
+
+Concept of "incremental compilation"
+
+* only compiles changed code and the code that depends on it
+* Suppose class A extends from class B and not other code depends on B.
+If we change B, only A get re-compiled.
+
+Annotation processing
+
+A regular annotation processor is some piece of code that gets run by the compiler.
+It could do anything, it might even format your hard-drive.
+
+So it has to be *run on any code change*.
+
+If you need to use an annotation processor limit its usage to a sub-project if possible.
+
+For instance, define your room entities in a separate module and apply
+the room annotation-processor only in there.
+--
+
+=== Incremental Annotation processing
+
+* since Gradle 4.7
+* processors need to opt-in
+* `kapt.incremental.apt = true` since kotlin 1.3.30
+
+[small]
+--
+https://docs.gradle.org/current/userguide/java_plugin.html#sec:incremental_annotation_processing
+--
+
+[NOTE.speaker]
+--
+To address the problem of broken incremental compilation due to annotation processing
+Gradle came up with a simple set of rules for processors to follow to enable incrementality.
+
+Each annotation processor need to explicitly declared that is follows those rules.
+
+For many annotation processors it has to be explicitly enabled!
+
+If any of the annotation processors in a project is not incremental,
+incremental compilation is disabled!
+
+When you run annotation processing through KAPT, incremental processing needs to be opted into.
+It also is only support starting from kotlin 1.3.30. You pot-in by specifying the
+listed property in your `gradle.properties` file.
+
+Given link to docs contains a list of popular annotation processors and
+the state of them supporting incremental annotation processing.
+--
+
+=== Dagger
+
+[source,groovy]
+.build.gradle
+----
+javaCompileOptions {
+  annotationProcessorOptions {
+    arguments << ["dagger.gradle.incremental": "true"]
+  }
+}
+----
+
+[NOTE.speaker]
+--
+inside `android.defaultConfig`
+--
+
+=== Cacheability
+
+Task has been run with same inputs before?
+ +
+Pull its outputs from cache
+
+`org.gradle.caching = true`
+
+[NOTE.speaker]
+--
+Extension on incrementality, handling the case that where the outputs have been deleted,
+but can be recreated from cache entry.
+
+Local build cache is handy *when switching between branches*.
+
+Outputs get overridden but can be recreated from the local cache.
+
+Tasks need to *opt-in* into this mechanism.
+--
+
+=== Local cache utilization
+
+image::build-cache-performance.png[build cache performance, 1100, *]
+
+[NOTE.speaker]
+--
+A scan after running `clean assembleDebug` twice.
+
+Outputs are fully pulled from cache.
+
+Remember: Caching needs to be enabled via `org.gradle.cache=true`, or running with `--build-cache`.
+--
+
+=== Local cache utilization
+
+Many tasks are cacheable
+
+[NOTE.speaker]
+--
+More to come with every Android Gradle plugin update.
+
+For example: java unit test execution is already cached for java modules.
+Coming for Android modules soon.
+
+If nothing has changed in a module or the modules it depends on, why re-run the tests?
+
+For some tasks, caching does not make sense:
+For example: Jar task is not cached, it's faster to re-execute than to pull from cache and extract again.
+--
+
+=== Remote cache
+
+image::build-cache.png[remote cache setup, 600, *]
+
+[NOTE.speaker]
+--
+Local caching is nice, but you actually what remote caching.
+
+A remote cache is a cache shared within your team or organization.
+
+Cache gets populated from CI builds, developers only read from it.
+
+Can be used side-by side with a local build cache.
+
+Now everything that has been build on CI becomes available from the cache!
+
+Tremendous speed-ups in development.
+
+Scenario:
+
+* the long first build after pulling in the morning
+* CI has build it before, lot's of task outputs can be pulled off the remote cache.
+--
+
+=== Remote Cache Misses
+
+* input hash changes across environments
+* due to non-portable inputs
+
+Talk by Nelson Osacky from SoundCloud:
+ +
+https://www.youtube.com/watch?v=tHe4IC0fBKg
+
+[NOTE.speaker]
+--
+Maintaining a high cache hit rate is still some effort.
+
+There have been quite some tasks in the Android Gradle plugins
+that broke cacheability
+
+But bugs get fixed with every new release of the Android Gradle plugin,
+so staying up to date is important.
+--
+
+=== Parallelism
+
+* `org.gradle.parallel = true` or `--parallel`
+* for decoupled modules
+
+[NOTE.speaker]
+--
+Off by default, should be safe in almost all cases.
+
+Works best with many small, decoupled modules.
+
+There is no in-project parallelity.
+
+Gradle has separate APIs for in-project parallel execution that plugins can use.
+--
+
+=== A non-parallel build
+
+image::no-parallel-execution.png[no parallel execution, 1100, *]
+
+=== A parallel build
+
+image::parallel-execution.png[parallel execution, 1100, *]
+
+
+//
+//=== Resources
+//
+//* https://gradle.com/blog/improving-android-and-java-build-performance/
+//* Tony Robalik: droidcon SF 2018 - Improving Android Build performance
+//https://www.youtube.com/watch?v=XZFnuFUMT7w
+

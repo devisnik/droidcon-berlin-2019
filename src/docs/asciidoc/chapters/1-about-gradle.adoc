@@ -1,0 +1,55 @@
+== What is Gradle?
+
+[NOTE.speaker]
+--
+We all heard that the Android build system is based on Gradle.
+And we'll look into the mechanics of that quite bit in this this talk.
+
+So what is Gradle?
+--
+
+=== Gradle.org
+
+Gradle is a build and automation tool.
+
+[small]
+--
+* agnostic Build System
+* 100% Free Open Source - Apache Standard License 2.0
+** JVM based
+** Multi-ecosystem
+*** JVM: Java, Kotlin, Groovy, Scala, ...
+*** Native: C/C++, Go, ...
+*** Android
+*** ...
+--
+
+[NOTE.speaker]
+--
+Gradle is not "the Android build system", but an agnostic Build system....
+
+Can be adopted to many different build ecosystems.
+
+Some years ago Android Buildtools team decided to base the Android build system on Gradle,
+providing the "Android Gradle plugin".
+
+That plugin adapts Gradle to build Android projects.
+
+We work closely with to improve performance with every new release.
+--
+
+
+=== Gradle Inc.
+
+The company behind Gradle.
+
+* Builds Happiness
+* Employs full time engineers
+* Provides Gradle Build Scans and Gradle Enterprise
+* Consulting and Training
+
+[small]
+--
+* https://gradle.com/training/
+* https://gradle.com/blog/tag/webcast/
+--

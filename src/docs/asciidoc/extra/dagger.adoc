@@ -1,0 +1,40 @@
+== Dagger
+
+https://jakewharton.com/helping-dagger-help-you/
+https://google.github.io/dagger/compiler-options.html
+
+[source,groovy]
+.build.gradle
+----
+allprojects {
+	tasks.withType(JavaCompile).all {
+		options.compilerArgs += [
+			'-Adagger.formatGeneratedSource=disabled',
+			'-Adagger.gradle.incremental=enabled'
+		]
+	}
+	
+	afterEvaluate {
+		extensions.findByName('kapt')?.arguments {
+			arg("dagger.formatGeneratedSource=disabled")
+			arg("dagger.gradle.incremental=enabled")
+		}
+	}
+}
+----
+
+Dagger 2.23 : https://github.com/google/dagger/commit/fcd069cc7e14e620c85ab27eb6617fc3598d1c5a
+
+=== Advice from Kotlin dev
+
+[source,groovy]
+.build.gradle
+----
+javaCompileOptions {
+  annotationProcessorOptions {
+    arguments << ["dagger.gradle.incremental": "true"]
+  }
+}
+----
+
+Android Study Group Slack: https://androidstudygroup.slack.com/archives/C0SFT151T/p1557131612169000

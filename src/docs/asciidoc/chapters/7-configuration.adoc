@@ -1,0 +1,301 @@
+=== Configuration
+
+* Evaluating build scripts
+* Applying plugins
+* Running `afterEvaluate {}` blocks
+
+[NOTE.speaker]
+--
+
+--
+
+=== When?
+
+* on any Gradle run
+* Even `./gradlew help` or `./gradlew tasks`
+* Android Studio sync
+
+=== Slow plugin
+
+image::slow-plugin-configuration.png[slow plugin application, 1100, *]
+
+Be aware of inefficient plugins!
+
+=== Resolution at configuration time
+
+image::resolution-at-configuration.png[eager dependency resolution, 1100, *]
+Avoid Dependency resolution at configuration time!
+
+[NOTE.speaker]
+--
+Can happen easily!
+
+So common, build scan warns about it in "Performance > Settings & Suggestions".
+--
+
+=== Eager Resolution
+
+[source,groovy]
+----
+task fatJar(type: Jar) {
+    from configurations.runtime.collect {
+        it.isDirectory() ? it : zipTree(it)
+    }
+    with jar
+    classifier = 'fat-jar'
+}
+----
+
+[NOTE.speaker]
+--
+" `configurations.runtime.collect` triggers dependency resolution
+* this is expensive
+* fortunately, the fix is simple
+--
+
+=== Lazy Resolution
+
+[source,groovy]
+----
+task fatJar(type: Jar) {
+    from {
+        configurations.runtime.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+    }
+    with jar
+    classifier = 'fat-jar'
+}
+----
+
+[NOTE.speaker]
+--
+* pass an action that the task can run when needed instead of the resolved dependencies
+--
+
+=== Configuration Avoidance
+
+[source,groovy]
+----
+tasks.register("fatJar", Jar) {
+    from configurations.runtimeClasspath.elements.map {
+        it.isDirectory() ? it : zipTree(it)
+    }
+    with jar
+    classifier = 'fat-jar'
+}
+----
+
+//https://scans.gradle.com/s/ulzhbqz7wls5a/performance/configuration
+
+https://docs.gradle.org/current/userguide/task_configuration_avoidance.html
+https://blog.gradle.org/preview-avoiding-task-configuration-time
+
+[NOTE.speaker]
+--
+New APIs for Task configuration Avoidance and Lazy Configuration
+
+Easy to fix but hard to find. Build scans help!
+
+--
+
+=== I/O at configuration time
+
+image::task-runs-at-configuration.png[expensive configuration, 1100, *]
+
+That build script seems expensive
+
+//https://scans.gradle.com/s/zs3qfbijbyka4/performance/configuration#stats.gradle
+
+[NOTE.speaker]
+--
+Gradle puts a lot of effort into avoiding IO at configuration time.
+(don't touch unchanged scripts, don't recompile them, in memory caches in the daemon.)
+
+In above scan we see a suspiciously long configuration time for the stats script.
+--
+
+=== I/O at configuration time
+
+[source,groovy]
+----
+task projectStats {
+    def statsFile = new File(buildDir, 'stats.txt')
+    statsFile.parentFile.mkdirs()
+    def javaFiles = sourceSets.main.java.size()
+    def javaSize = sourceSets.main.java
+	.collect{it.text.bytes}
+	.flatten()
+	.sum()
+    statsFile.text = """
+    |SourceFiles:  ${javaFiles}
+    |Source size:  ${javaSize} bytes
+    """.stripMargin()
+}
+----
+
+Careful with custom tasks!
+
+[NOTE.speaker]
+--
+* A a custom task that creates a files containing some project statistics
+
+So, what is wrong here?
+
+* the file is created during task definition
+* `doLast {}` is missing
+--
+
+
+=== I/O at configuration time
+
+[source,groovy]
+----
+task projectStats {
+    def statsFile = new File(buildDir, 'stats.txt')
+    input.files sourceSet.main.java
+    outputs.file statsFile
+    doLast {
+        statsFile.parentFile.mkdirs()
+        def javaFiles = sourceSets.main.java.size()
+        def javaSize = sourceSets.main.java
+        	.collect{it.text.bytes}
+        	.flatten()
+        	.sum()
+        statsFile.text = """
+        |SourceFiles:  ${javaFiles}
+        |Source size:  ${javaSize} bytes
+        """.stripMargin()
+    }
+}
+----
+
+Don't forget `doLast{}`
+
+[NOTE.speaker]
+--
+Fixes the problem, but best practise is to create a separate task class.
+--
+
+=== I/O at configuration time
+
+[source,groovy]
+----
+task projectStats(type: ProjectStats) {
+    statsFile = new File(buildDir, 'stats.txt')
+    sources = sourceSet.main.java
+}
+
+class ProjectStats extends DefaultTask {
+    @InputFiles FileCollection sources
+    @OutputFile File statsFile
+
+    @TaskAction def stats() {
+      statsFile.text = """
+      |Files: ${sources.size()}
+      |Total: ${sources.collect{it.text.bytes}.flatten().sum()} bytes
+      """.stripMargin()
+    }
+}
+----
+
+[NOTE.speaker]
+--
+Create a custom task class to model what the task is doing.
+"doLast{}" is not an issue with those then.
+
+Properly declare the tasks inputs and outputs.
+
+Class can be put into the buildSrc directory.
+Keeps your build logic clean.
+
+Can be compiled statically.
+--
+
+=== Inefficient Plugins
+
+[source,groovy]
+----
+// version.gradle
+def out = new ByteArrayOutputStream()
+exec {
+    commandLine 'git','rev-parse','HEAD'
+    standardOutput = out
+    workingDir = rootDir
+}
+version = new String(out.toByteArray())
+
+// root 'build.gradle'
+allprojects {
+    apply from:'$rootDir/version.gradle'
+}
+----
+
+[NOTE.speaker]
+--
+Who does the code do:
+
+in the script `version.gradle`
+
+* executes a git command to determine the latest git commit hash.
+* sets the hash as the project's version
+
+in `build.gradle`
+
+* script `version.gradle` is applied to all the sub-projects
+
+That means the git execution is *run for every sub-module again*.
+--
+
+=== Re-use expensive logic
+
+[source,groovy]
+----
+// root 'build.gradle'
+apply from:"$rootDir/version.gradle"
+
+subprojects {
+    version = rootProject.version
+}
+----
+
+[NOTE.speaker]
+--
+Re-use the computed git hash in sub-projects, instead of recomputing.
+
+BTW: There is a plugin that does it, no need to do it yourself.
+
+
+https://github.com/palantir/gradle-git-version
+--
+
+=== Variant explosion
+
+[source,groovy]
+----
+variantFilter { variant ->
+    def flavorName = variant.flavors[0].name
+    def devFlavor = flavorName == 'dev'
+    if(!devFlavor && variant.buildType.name == 'release') {
+        variant.ignore = true
+    }
+}
+----
+
+[NOTE.speaker]
+--
+Android allows for rich buildType and flavor definitions.
+
+This quickly leads to lots of build variants, which need to be configured.
+
+Filter out combinations that are not used.
+
+For example, you might have a `dev` flavor as recommended by Google to
+speed up builds during development.
+
+(i.e. to run without shrinking when minSdk is normally < 21 and debug apk > 64k)
+
+https://developer.android.com/studio/build/multidex#mdex-on-l
+
+--
+

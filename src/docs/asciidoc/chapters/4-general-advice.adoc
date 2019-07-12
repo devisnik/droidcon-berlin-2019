@@ -1,0 +1,127 @@
+== General Advice
+
+[NOTE.speaker]
+--
+Before we start looking into specific findings, let me give some general advice.
+--
+
+=== Stay up-to-date
+
+`./gradlew wrapper --gradle-version 5.5`
+
+https://services.gradle.org/versions/current
+
+{sp}
+
+[source,groovy]
+.build.gradle
+----
+classpath 'com.android.tools.build:gradle:3.4.1'
+----
+
+[NOTE.speaker]
+--
+There is *performance improvements* and *bug fixes* coming with every new release.
+
+Gradle releases every 6 to 8 weeks.
+
+AGP is updated a bit less frequently.
+--
+
+=== Settings
+
+`org.gradle.jvmargs=-Xmx4G`
+
+`org.gradle.daemon = true`
+
+[small]
+--
+`org.gradle.caching = true`
+
+`org.gradle.parallel = true`
+--
+
+[NOTE.speaker]
+--
+jvmargs:
+
+You might see some post on stack overflow advising "just past these 20 parameters into your jvmargs".
+Don't do that!
+
+* just provide enough heap space
+* other tweaks often do harm,
+* time is better spent on structural improvements
+
+daemon:
+
+* ON by default, Do not disable it!
+* in-memory caches
+* when building repeatedly
+* builds get faster over time due to JIT and in-memory caching
+
+If you need to disable the daemon for whatever reason, there is a problem in your build you need to fix.
+
+At Gradle, we even run CI builds with enabled daemon.
+
+You set those in `gradle.properties` in the root project
+
+Settings for all your builds go into the `gradle.properties` of your GRADLE_HOME folder.
+
+You probably want to enable caching and parallel builds as well.
+We'll look into the details of those later.
+
+//parallel:
+//
+//* OFF by default, usually safe to enable
+//* speeds up multi-project builds
+//
+//caching:
+//
+//* caches locally by default
+//* like "up-to-date" but between branches
+//* can work with remote cache as well
+//* older kotlin: usage by KAPT needs to be enabled
+--
+
+=== Repository content filtering
+
+[source,groovy]
+----
+google() {
+    content {
+	    includeGroupByRegex "com\\.android\\..*"
+	    includeGroupByRegex "com\\.google\\.android\\..*"
+	    includeGroupByRegex "androidx\\..*"
+    }
+}
+----
+
+[small]
+--
+https://docs.gradle.org/current/userguide/declaring_repositories.html#declaring_a_repository_filter
+--
+
+[NOTE.speaker]
+--
+A lot of work at Gradle has gone into improving dependency management, lately.
+
+There is a dedicated team working on that.
+
+One of things added is *Repository content filter*.
+
+Allows to specify which dependencies to expect from a repository.
+
+Repositories are searched in the order they are defined, and usually `google()` has to be
+defined first. (There was an issue with play services forcing that ordering.)
+
+Great too for repositories that only provide a single or very few dependencies.
+(jitpack, your custom repo, fabrics repo, ...)
+
+Reasons:
+
+* performance, when you know a dependency will never be found in a specific repository
+* security, by avoiding leaking what dependencies are used in a private project
+* reliability, when some repositories contain corrupted metadata or artifacts
+
+It’s even more important when considering that order of repositories matter.
+--

@@ -1,0 +1,146 @@
+
+== Build Lifecycle
+
+[NOTE.speaker]
+--
+Once our measurements and profiling is done, we need good way to *visualize*
+what has actually happened in the profiled build.
+
+And the best tool for that job is *Build Scans*.
+--
+
+
+=== Build Scans
+
+image::build-scan-overview.png[Build Scan Overview, 1100, 500]
+
+`./gradlew --scan` {nbsp}{nbsp}{nbsp}{nbsp}{nbsp}{nbsp}  http://scans.gradle.com
+
+[NOTE.speaker]
+--
+Who has used build scans before?
+
+Who uses it regularly?
+
+How does it work? Just add `--scan` and your provided with a link to scan at the end of the build.
+
+* free service provided by Gradle Inc.
+
+* shareable, persistent record of a build
+* provides insights into what happened and why
+* user-friendly and insightful
+* completely free
+
+* supports Gradle and Maven builds
+* deep links to any of the details
+* to be shared with your colleagues
+* only accessible via a randomly generated link
+
+Google loves these build scans too.
+--
+
+=== Build Lifecycle
+
+image::scan-performance.png[the build lifecycle, 1100, 500]
+
+[NOTE.speaker]
+--
+Here we look into the performance section of a build scan.
+
+* detailed listing of how much time was spent in certain parts of the build
+
+3 Phases
+
+* initialization: startup, run buildSrc project, read settings
+* configuration: Gradle makes sense of your build
+* execution: Gradle runs the requested tasks (and all the tasks that need to run before them)
+
+We'll look at each of these phases separately.
+
+Gradle and Android Gradle plugin do lots of optimizations to keep the build fast.
+
+But Gradle is also very flexible, and there are many opportunities to shoot yourself in the foot.
+
+--
+
+=== High GC time
+
+image::high-gc-time.png[high gc time, *, 500]
+
+[NOTE.speaker]
+--
+Sometimes the problem is pretty easy to spot!
+
+Here we see a build with a high time spent on garbage collection.
+
+--
+
+=== High GC time (fixed)
+
+image::high-gc-time-fixed.png[high gc time fixed, *, 500]
+
+
+=== Red flags
+
+* initialization > 1s
+* long configuration
+//* no-op build doing any work
+* single line change `~=` clean build
+* high gc time
+
+[NOTE.speaker]
+--
+* Startup/Settings/buildSrc being slow
+** daemon enabled? Healthy?
+** dedicated section in the build scans
+** might have a memory leak
+
+* configuration
+** dependent on your build
+** previous scan configuration took 1.4 seconds, 20 sub-projects, 100.000 lines of code, mixed kotlin/java
+
+* single line change
+** Gradle supports incremental compilation
+** should only re-build what has changed and their dependants
+--
+
+=== Logic during initialization
+
+Don't do this!
+
+[source,groovy]
+----
+// logic in settings.gradle
+// brittle, can be slow!
+
+new File('.').eachFileRecurse(groovy.io.FileType.DIRECTORIES) { dir ->
+    if (new File(dir,"build.gradle").exists()) {
+        def name = dir.toString()[1..-1].replaceAll('/',':')
+        include name
+    }}
+----
+
+[NOTE.speaker]
+--
+Someone tried to be clever!
+
+* code traverses the project file tree to find all subprojects automatically,
+avoiding adding an `include` line for each new subproject
+
+* this is *expensive*
+
+* dependent on file system layout
+* incurs hidden performance penalty
+* clever, but brittle!
+--
+
+// === Startup / Settings / BuildSrc
+//
+// image::scans-daemon-status.png[keep daemon healty, 1100, 350]
+//
+// https://scans.gradle.com/s/n7q54jqbq3qma/performance/daemon
+//
+// `./gradlew --status`
+//
+// `pgrep -lf "GradleDaemon"`
+
